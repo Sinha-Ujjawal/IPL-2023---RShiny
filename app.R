@@ -18,16 +18,20 @@ load_df_matches <- function(fileid) {
   df_matches[, "Datestamp" := as.POSIXct(paste(`Date`, `Time`, sep=" "), format = "%d-%b-%y %H:%M:%S", tz = "IST")]
 }
 
+DF_MATCHES <- load_df_matches("1Q65lfqb1sCg6Sa84OpjWRY6dDH8poald")
+MAX_DAYS <- last_match_day(DF_MATCHES)
+
 ui <- fluidPage(
   tags$head(HTML("<title>IPL 2023</title>")),
   
   titlePanel(textOutput(outputId = "wout_title")),
   
   verticalLayout(
-    numericInput(
-      inputId = "win_days_till",
+    sliderInput(
+      inputId = "days_till",
       label = textOutput(outputId = "wout_days_till"),
       min = 1,
+      max = MAX_DAYS,
       value = 1
     ),
     h3("Scorecard"),
@@ -36,28 +40,23 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  df_matches <- load_df_matches("1Q65lfqb1sCg6Sa84OpjWRY6dDH8poald")
-  rx_df_matches <- reactiveVal(df_matches)
-  rx_max_win_days_till <- reactiveVal(last_match_day(df_matches))
+  rx_df_scorecard <- reactiveVal(scorecard_hist(DF_MATCHES, 1))
   
-  rx_values <- reactiveValues()
-  
-  observeEvent(input$win_days_till, {
-    max_win_days_till <- rx_max_win_days_till()
-    if (input$win_days_till > max_win_days_till) {
-      updateNumericInput(inputId = "win_days_till", value = max_win_days_till)
+  observeEvent(input$days_till, {
+    if (input$days_till > MAX_DAYS) {
+      updateNumericInput(inputId = "days_till", value = MAX_DAYS)
     } else {
-      rx_values$df_scorecard <- scorecard_hist(rx_df_matches(), input$win_days_till)
+      rx_df_scorecard(scorecard_hist(DF_MATCHES, input$days_till))
     }
   })
   
   get_title <- reactive({
-    dt <- last_updated_date(rx_df_matches())
+    dt <- last_updated_date(DF_MATCHES)
     paste0("IPL ", year(dt), " (Last Updated On: ", format(dt, "%Y-%m-%d"), ")")
   })
   
   get_days_till_text <- reactive({
-    df_scorecard <- rx_values$df_scorecard
+    df_scorecard <- rx_df_scorecard()
     if (nrow(df_scorecard) >= 1) {
       paste0("Days Till (", format(df_scorecard$`Date`[1], "%Y-%m-%d"), ")")
     } else {
@@ -65,10 +64,10 @@ server <- function(input, output) {
     }
   })
   
-  output$wout_scorecard_table <- renderDataTable(rx_values$df_scorecard)
-  output$wout_title <- renderText({get_title()})
-  output$wout_days_till <- renderText({get_days_till_text()})
-  output$wout_max_days_till <- renderText({get_max_days_till()})
+  output$wout_scorecard_table <- renderDataTable(rx_df_scorecard())
+  output$wout_title <- renderText(get_title())
+  output$wout_days_till <- renderText(get_days_till_text())
+  output$wout_max_days_till <- renderText(get_max_days_till())
 }
 
 shinyApp(ui = ui, server = server)
