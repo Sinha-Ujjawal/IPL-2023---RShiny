@@ -137,16 +137,16 @@ scorecard <- function(df_matches, lastn = 5) {
 
 scorecard_hist <- function(df_matches, days_till, lastn = 5) {
   df_matches <- df_matches[`Match Day` <= days_till]
-  dt <- last_updated_date(df_matches)
+  dt <- last_completed_match_date(df_matches)
   df_ret <- scorecard(df_matches, lastn = lastn)
   df_ret[,`:=`("Days Till" = days_till, "Date" = dt)]
   df_ret
 }
 
-last_updated_date <- function(df_matches) {
+last_completed_match_date <- function(df_matches) {
   df_matches[!is.na(`Winner`), max(`Datestamp`)] |> as.IDate()
 }
 
-last_match_day <- function(df_matches) {
+last_completed_match_day <- function(df_matches) {
   df_matches[!is.na(`Winner`), max(`Match Day`)]
 }
