@@ -32,69 +32,71 @@ DF_LAST_COMPLETED_MATCHES <- DF_MATCHES[`Match Day` == LAST_COMPLETED_MATCH_DAY]
 NEXT_MATCH_DAY <- LAST_COMPLETED_MATCH_DAY + 1
 DF_NEXT_DAY_MATCHES <- DF_MATCHES[`Match Day` == NEXT_MATCH_DAY]
 
-ui <- fluidPage(
-  tags$head(HTML("<title>IPL 2023</title>")),
-  
-  # Title
-  titlePanel(textOutput(outputId = "wout_title")),
-  ##
-  
-  markdown(paste0("#### Matches Left: ", (TOTAL_DAYS - LAST_COMPLETED_MATCH_DAY), "/", TOTAL_DAYS)),
-  
-  verticalLayout(
-    # Scorecard
-    sliderInput(
-      inputId = "days_till",
-      label = textOutput(outputId = "wout_days_till"),
-      min = 1,
-      max = LAST_COMPLETED_MATCH_DAY,
-      value = LAST_COMPLETED_MATCH_DAY
-    ),
+ui <- function(req) {
+  fluidPage(
+    tags$head(HTML("<title>IPL 2023</title>")),
     
-    h3("Scorecard"),
-    dataTableOutput(outputId = "wout_scorecard_table"),
+    # Title
+    titlePanel(textOutput(outputId = "wout_title")),
     ##
     
-    # Last Completed Day Matches
-    {
-      if (LAST_COMPLETED_MATCH_DAY > 0) {
-        verticalLayout(
-          h3({
-            dt <- DF_LAST_COMPLETED_MATCHES$`Datestamp`[1]
-            paste0("Last Completed Day (", my_date_formatter(dt), ") Match(s)")
-          }),
-          dataTableOutput(outputId = "wout_last_completed_day_match_table")
-        )
-      }
-      else {
-        HTML("")
-      }
-    },
-    ##
+    markdown(paste0("#### Matches Left: ", (TOTAL_DAYS - LAST_COMPLETED_MATCH_DAY), "/", TOTAL_DAYS)),
     
-    # Next Day Matches
-    {
-      if (NEXT_MATCH_DAY < TOTAL_DAYS) {
-        verticalLayout(
-          h3({
-            dt <- DF_NEXT_DAY_MATCHES$`Datestamp`[1]
-            paste0("Next (", my_date_formatter(dt), ") Match(s)")
-          }),
-          dataTableOutput(outputId = "wout_next_match_table")
-        )
-      }
-      else {
-        HTML("")
-      }
-    },
-    ##
-    
-    # All Matches
-    h3("All Matches"),
-    dataTableOutput(outputId = "wout_all_matches_table")
-    ##
+    verticalLayout(
+      # Scorecard
+      sliderInput(
+        inputId = "days_till",
+        label = textOutput(outputId = "wout_days_till"),
+        min = 1,
+        max = LAST_COMPLETED_MATCH_DAY,
+        value = LAST_COMPLETED_MATCH_DAY
+      ),
+      
+      h3("Scorecard"),
+      dataTableOutput(outputId = "wout_scorecard_table"),
+      ##
+      
+      # Last Completed Day Matches
+      {
+        if (LAST_COMPLETED_MATCH_DAY > 0) {
+          verticalLayout(
+            h3({
+              dt <- DF_LAST_COMPLETED_MATCHES$`Datestamp`[1]
+              paste0("Last Completed Day (", my_date_formatter(dt), ") Match(s)")
+            }),
+            dataTableOutput(outputId = "wout_last_completed_day_match_table")
+          )
+        }
+        else {
+          HTML("")
+        }
+      },
+      ##
+      
+      # Next Day Matches
+      {
+        if (NEXT_MATCH_DAY < TOTAL_DAYS) {
+          verticalLayout(
+            h3({
+              dt <- DF_NEXT_DAY_MATCHES$`Datestamp`[1]
+              paste0("Next (", my_date_formatter(dt), ") Match(s)")
+            }),
+            dataTableOutput(outputId = "wout_next_match_table")
+          )
+        }
+        else {
+          HTML("")
+        }
+      },
+      ##
+      
+      # All Matches
+      h3("All Matches"),
+      dataTableOutput(outputId = "wout_all_matches_table")
+      ##
+    )
   )
-)
+}
 
 server <- function(input, output) {
   rx_df_scorecard <- reactiveVal(scorecard_hist(DF_MATCHES, 1))
