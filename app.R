@@ -18,6 +18,7 @@ load_df_matches <- function(fileid) {
   df_matches[, "Datestamp" := as.POSIXct(paste(`Date`, `Time`, sep=" "), format = "%d-%b-%y %H:%M:%S", tz = "IST")]
   df_matches[`Winner` == "Home", "Winner Team Name" := `Home Team`]
   df_matches[`Winner` == "Away", "Winner Team Name" := `Away Team`]
+  df_matches[, "Time" := format(`Datestamp`, "%H:%M")]
   df_matches[order(`Datestamp`)]
 }
 

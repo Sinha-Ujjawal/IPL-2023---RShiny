@@ -51,7 +51,7 @@ by_team_last_n <- function(df_matches, n) {
   )
 }
 
-scorecard <- function(df_matches, lastn = 5) {
+scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
   df_win_stats <- rbindlist(list(
     df_matches[
       Winner == "Home",
@@ -120,10 +120,16 @@ scorecard <- function(df_matches, lastn = 5) {
           "Num Matches" = sum(`Num Matches`),
           "Num Wins" = sum(`Win Points`) %/% 2,
           "Num Losses" = sum(`Num Losses`),
-          "NRR" = (
-            (sum(`Runs For NRR`) / sum(`Balls For NRR`))
-            - (sum(`Opponent Runs For NRR`) / sum(`Opponent Balls For NRR`))
-          ) * 6,
+          "NRR" = round(
+            (
+              (
+                (sum(`Runs For NRR`) / sum(`Balls For NRR`))
+                - (sum(`Opponent Runs For NRR`) / sum(`Opponent Balls For NRR`))
+              )
+              * 6
+            ),
+            digits = nrr_round_digits
+          ),
           "Win Points" = sum(`Win Points`)
         ),
         by = `Team`
@@ -135,10 +141,10 @@ scorecard <- function(df_matches, lastn = 5) {
   )
 }
 
-scorecard_hist <- function(df_matches, days_till, lastn = 5) {
+scorecard_hist <- function(df_matches, days_till, lastn = 5, nrr_round_digits = 2) {
   df_matches <- df_matches[`Match Day` <= days_till]
   dt <- last_completed_match_date(df_matches)
-  df_ret <- scorecard(df_matches, lastn = lastn)
+  df_ret <- scorecard(df_matches, lastn = lastn, nrr_round_digits = nrr_round_digits)
   df_ret[,`:=`("Days Till" = days_till, "Date" = dt)]
   df_ret
 }
