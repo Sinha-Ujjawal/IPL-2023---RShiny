@@ -13,8 +13,7 @@ download_file_from_drive <- function(fileid, fileext) {
 
 load_df_matches <- function(fileid) {
   ipl_ods_link <- download_file_from_drive(fileid = fileid, fileext = ".ods")
-  df_matches <- (read_ods(ipl_ods_link, sheet = "Matches")
-                 |> as.data.table())
+  df_matches <- read_ods(ipl_ods_link, sheet = "Matches") |> as.data.table()
   df_matches[, "Datestamp" := as.POSIXct(paste(`Date`, `Time`, sep=" "), format = "%d-%b-%y %H:%M:%S", tz = "IST")]
   df_matches[`Winner` == "Home", "Winner Team Name" := `Home Team`]
   df_matches[`Winner` == "Away", "Winner Team Name" := `Away Team`]
@@ -69,22 +68,21 @@ server <- function(input, output) {
   df_matches <- load_df_matches("1Q65lfqb1sCg6Sa84OpjWRY6dDH8poald")
   total_days <- nrow(df_matches)
   
-  last_completed_match_day <- last_completed_match_day(df_matches)
+  last_completed_match_day <- get_last_completed_match_day(df_matches)
   df_last_completed_matches <- df_matches[`Match Day` == last_completed_match_day]
   
   next_match_day <- last_completed_match_day + 1
   df_next_day_matches <- df_matches[`Match Day` == next_match_day]
+  
+  df_scorecards <- 1:last_completed_match_day |>
+    lapply(function(days_till) build_scorecard_hist(df_matches, days_till)) |>
+    rbindlist()
   ##
   
-  rx_df_scorecard <- reactiveVal(scorecard_hist(df_matches, 1))
+  rx_df_scorecard <- reactiveVal(df_scorecards[`Days Till` == last_completed_match_day])
   
   observeEvent(input$win_days_till, {
-    rx_df_scorecard(scorecard_hist(df_matches, input$win_days_till))
-  })
-  
-  get_title <- reactive({
-    dt <- last_completed_match_date(df_matches)
-    paste0("IPL ", year(dt), " (Last Updated On: ", my_date_formatter(dt), ")")
+    rx_df_scorecard(df_scorecards[`Days Till` == input$win_days_till])
   })
   
   get_win_days_till_text <- reactive({
@@ -97,7 +95,10 @@ server <- function(input, output) {
   })
   
   # Title
-  output$wout_title <- renderText(get_title())
+  output$wout_title <- renderText({
+    dt <- get_last_completed_match_date(df_matches)
+    paste0("IPL ", year(dt), " (Last Updated On: ", my_date_formatter(dt), ")")
+  })
   ##
   
   # Matches left Markdown
@@ -115,7 +116,22 @@ server <- function(input, output) {
     max = last_completed_match_day
   )
   output$wout_win_days_till <- renderText(get_win_days_till_text())
-  output$wout_scorecard_table <- renderDataTable(rx_df_scorecard())
+  output$wout_scorecard_table <- renderDataTable(
+    rx_df_scorecard()
+    [
+      ,
+      list(
+        `Rank`,
+        `Team`,
+        `Num Matches`,
+        `Num Wins`,
+        `Num Losses`,
+        `NRR`,
+        `Win Points`,
+        `Last 5`
+      )
+    ]
+  )
   ##
   
   # Last Completed Day Matches
@@ -139,7 +155,7 @@ server <- function(input, output) {
             `Runs (Away)`,
             `Balls (Away)`,
             `Wickets Dropped (Away)`,
-            "Winner" = if (`Winner` == "Home") {`Home Team`} else {`Away Team`} 
+            "Winner" = `Winner Team Name`
           )
         ])
       )

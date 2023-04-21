@@ -1,6 +1,6 @@
 library(data.table)
 
-by_team_match_records <- function(df_matches) {
+build_by_team_match_records <- function(df_matches) {
   (
     rbindlist(list(
       df_matches[
@@ -33,15 +33,15 @@ by_team_match_records <- function(df_matches) {
   )
 }
 
-by_team_last_n_match_records <- function(df_matches, n) {
-  df_by_team_match_records <- by_team_match_records(df_matches)
+build_by_team_last_n_match_records <- function(df_matches, n) {
+  df_by_team_match_records <- build_by_team_match_records(df_matches)
   setkey(df_by_team_match_records, `Team`)
   df_by_team_match_records[, rank := .N:1, by = list(`Team`)]
   df_by_team_match_records[rank <= n][order(-rank)][,!"rank"]
 }
 
-by_team_last_n <- function(df_matches, n) {
-  df_by_team_last_n_match_records <- by_team_last_n_match_records(df_matches, n)
+build_by_team_last_n <- function(df_matches, n) {
+  df_by_team_last_n_match_records <- build_by_team_last_n_match_records(df_matches, n)
   df_by_team_last_n_match_records[`Won?` == TRUE, "WonStr" := "✔"]
   df_by_team_last_n_match_records[`Won?` == FALSE, "WonStr" := "✖"]
   col_expr <- parse(text = paste0("list(\"Last ", n, "\" = paste(`WonStr`, collapse=\"\"))"))
@@ -51,7 +51,7 @@ by_team_last_n <- function(df_matches, n) {
   )
 }
 
-scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
+build_scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
   df_win_stats <- rbindlist(list(
     df_matches[
       Winner == "Home",
@@ -110,7 +110,7 @@ scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
     ]
   ))
   
-  df_by_team_last_n <- by_team_last_n(df_matches, n = lastn)
+  df_by_team_last_n <- build_by_team_last_n(df_matches, n = lastn)
   
   (
     merge.data.table(
@@ -138,21 +138,22 @@ scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
       by="Team"
     )
     [order(-`Win Points`, -`NRR`)]
+    [, "Rank" := 1:.N]
   )
 }
 
-scorecard_hist <- function(df_matches, days_till, lastn = 5, nrr_round_digits = 2) {
+build_scorecard_hist <- function(df_matches, days_till, lastn = 5, nrr_round_digits = 2) {
   df_matches <- df_matches[`Match Day` <= days_till]
-  dt <- last_completed_match_date(df_matches)
-  df_ret <- scorecard(df_matches, lastn = lastn, nrr_round_digits = nrr_round_digits)
+  dt <- get_last_completed_match_date(df_matches)
+  df_ret <- build_scorecard(df_matches, lastn = lastn, nrr_round_digits = nrr_round_digits)
   df_ret[,`:=`("Days Till" = days_till, "Date" = dt)]
   df_ret
 }
 
-last_completed_match_date <- function(df_matches) {
+get_last_completed_match_date <- function(df_matches) {
   df_matches[!is.na(`Winner`), max(`Datestamp`)] |> as.IDate()
 }
 
-last_completed_match_day <- function(df_matches) {
+get_last_completed_match_day <- function(df_matches) {
   df_matches[!is.na(`Winner`), max(`Match Day`)]
 }
