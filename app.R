@@ -109,7 +109,15 @@ server <- function(input, output) {
   # Matches left Markdown
   output$wout_match_left_md <- renderUI(
     markdown(
-      paste0("#### Matches Left: ", (total_days - last_completed_match_day), "/", total_days)
+      paste0(
+        "#### Matches Left: ",
+        (total_days - last_completed_match_day),
+        "/",
+        total_days,
+        " (",
+        round(last_completed_match_day * 100 / total_days, 0),
+        "% complete)"
+      )
     )
   )
   ##
@@ -250,7 +258,8 @@ server <- function(input, output) {
       `Runs (Away)`,
       `Balls (Away)`,
       `Wickets Dropped (Away)`,
-      "Winner" = `Winner Team Name`
+      "Winner" = `Winner Team Name`,
+      `Comments`
     )
   ])
   ##
