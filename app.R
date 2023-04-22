@@ -62,6 +62,7 @@ ui <- fluidPage(
     
     # Next Day Matches
     htmlOutput(outputId = "wout_next_day_matches"),
+    markdown("***Note - Win Probability is calculated based on common opponents comparison. It's very naïve and most likely incorrect. There is no science backing it. Use it at your own risk ;)***"),
     ##
     
     # All Matches
@@ -76,11 +77,29 @@ server <- function(input, output) {
   df_matches <- load_df_matches("1Q65lfqb1sCg6Sa84OpjWRY6dDH8poald")
   total_days <- nrow(df_matches)
   
+  df_matches_till_date <- df_matches[!is.na(`Winner`)]
+  
   last_completed_match_day <- get_last_completed_match_day(df_matches)
   df_last_completed_matches <- df_matches[`Match Day` == last_completed_match_day]
   
   next_match_day <- last_completed_match_day + 1
   df_next_day_matches <- df_matches[`Match Day` == next_match_day]
+  
+  home_teams <- df_next_day_matches$`Home Team`
+  away_teams <- df_next_day_matches$`Away Team`
+  
+  df_next_day_matches$`Win Probs` <- 1:length(home_teams) |>
+    lapply(function(i) estimate_prob_wins(df_matches_till_date, home_teams[[i]], away_teams[[i]]))
+  
+  df_next_day_matches$`Win Prob (Home Team)` <- df_next_day_matches$`Win Probs` |>
+    lapply(function(win_probs) win_probs[[1]]) |>
+    unlist() |>
+    round(2)
+  
+  df_next_day_matches$`Win Prob (Away Team)` <- df_next_day_matches$`Win Probs` |>
+    lapply(function(win_probs) win_probs[[2]]) |>
+    unlist() |>
+    round(2)
   
   df_scorecards <- 1:last_completed_match_day |>
     lapply(function(days_till) build_scorecard_hist(df_matches, days_till)) |>
@@ -94,7 +113,7 @@ server <- function(input, output) {
   distinct_teams <- unique(df_scorecards$`Team`) |> sort()
   distinct_num_teams <- distinct_teams |> length()
   
-  df_scorecards[, "Inverse Rank" := distinct_num_teams + 1 - `Rank`]
+  df_scorecards[, "Inverse Rank" := -`Rank`]
   
   setindex(df_scorecards, `Days Till`)
   ##
@@ -233,7 +252,9 @@ server <- function(input, output) {
             `Day`,
             `Time`,
             `Home Team`,
-            `Away Team`
+            `Win Prob (Home Team)`,
+            `Away Team`,
+            `Win Prob (Away Team)`
           )
         ])
       )
