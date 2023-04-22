@@ -129,7 +129,12 @@ server <- function(input, output) {
     rx_df_scorecard(df_scorecards[`Days Till` == input$win_days_till])
   })
   
-  get_win_days_till_text <- reactive({
+  updateSliderInput(
+    inputId = "win_days_till",
+    value = last_completed_match_day,
+    max = last_completed_match_day
+  )
+  output$wout_win_days_till <- renderText({
     df_scorecard <- rx_df_scorecard()
     if (nrow(df_scorecard) >= 1) {
       paste0("Days Till (", my_date_formatter(df_scorecard$`Date`[1]), ")")
@@ -137,13 +142,6 @@ server <- function(input, output) {
       "Days Till"
     }
   })
-  
-  updateSliderInput(
-    inputId = "win_days_till",
-    value = last_completed_match_day,
-    max = last_completed_match_day
-  )
-  output$wout_win_days_till <- renderText(get_win_days_till_text())
   output$wout_scorecard_table <- renderDataTable(
     rx_df_scorecard()
     [
