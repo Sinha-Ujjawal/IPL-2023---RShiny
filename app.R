@@ -1,8 +1,10 @@
 source("./ipl_stat_utils.R")
 
-library(shiny)
 library(data.table)
+library(ggplot2)
 library(readODS)
+library(shiny)
+library(stringi)
 
 download_file_from_drive <- function(fileid, fileext) {
   temp <- tempfile(fileext = fileext)
@@ -48,6 +50,12 @@ ui <- fluidPage(
     dataTableOutput(outputId = "wout_scorecard_table"),
     ##
     
+    # Scorecard Bump Chart
+    h3("Scorecard Bump Chart"),
+    htmlOutput(outputId = "wout_scorecard_bump_chart_team_selector"),
+    plotOutput(outputId = "wout_scorecard_bump_chart"),
+    ##
+    
     # Last Completed Day Matches
     htmlOutput(outputId = "wout_last_completed_day_matches"),
     ##
@@ -77,22 +85,19 @@ server <- function(input, output) {
   df_scorecards <- 1:last_completed_match_day |>
     lapply(function(days_till) build_scorecard_hist(df_matches, days_till)) |>
     rbindlist()
+  
+  df_scorecards[, "Team Short Name" := strsplit(`Team`, split = " ") |> lapply(function(word) substr(word, 1, 1))]
+  df_scorecards$`Team Short Name` <- df_scorecards$`Team Short Name` |>
+    lapply(stri_flatten) |>
+    unlist()
+  
+  distinct_teams <- unique(df_scorecards$`Team`) |> sort()
+  distinct_num_teams <- distinct_teams |> length()
+  
+  df_scorecards[, "Inverse Rank" := distinct_num_teams + 1 - `Rank`]
+  
+  setindex(df_scorecards, `Days Till`)
   ##
-  
-  rx_df_scorecard <- reactiveVal(df_scorecards[`Days Till` == last_completed_match_day])
-  
-  observeEvent(input$win_days_till, {
-    rx_df_scorecard(df_scorecards[`Days Till` == input$win_days_till])
-  })
-  
-  get_win_days_till_text <- reactive({
-    df_scorecard <- rx_df_scorecard()
-    if (nrow(df_scorecard) >= 1) {
-      paste0("Days Till (", my_date_formatter(df_scorecard$`Date`[1]), ")")
-    } else {
-      "Days Till"
-    }
-  })
   
   # Title
   output$wout_title <- renderText({
@@ -110,6 +115,21 @@ server <- function(input, output) {
   ##
   
   # Scorecard
+  rx_df_scorecard <- reactiveVal(df_scorecards[`Days Till` == last_completed_match_day])
+  
+  observeEvent(input$win_days_till, {
+    rx_df_scorecard(df_scorecards[`Days Till` == input$win_days_till])
+  })
+  
+  get_win_days_till_text <- reactive({
+    df_scorecard <- rx_df_scorecard()
+    if (nrow(df_scorecard) >= 1) {
+      paste0("Days Till (", my_date_formatter(df_scorecard$`Date`[1]), ")")
+    } else {
+      "Days Till"
+    }
+  })
+  
   updateSliderInput(
     inputId = "win_days_till",
     value = last_completed_match_day,
@@ -132,6 +152,36 @@ server <- function(input, output) {
       )
     ]
   )
+  ##
+  
+  # Scorecard Bump Chart
+  rx_df_scorecard_bump_chart <- reactiveVal(df_scorecards)
+  
+  output$wout_scorecard_bump_chart_team_selector <- renderUI(
+    selectInput(
+      inputId = "win_scorecard_bump_chart_selected_teams",
+      label = "Select Teams to Filter",
+      choices = distinct_teams,
+      selected = distinct_teams,
+      multiple = TRUE
+    )
+  )
+  observeEvent(input$win_scorecard_bump_chart_selected_teams, {
+    selected_teams <- input$win_scorecard_bump_chart_selected_teams
+    rx_df_scorecard_bump_chart(df_scorecards[`Team` %in% selected_teams])
+  })
+  output$wout_scorecard_bump_chart <- renderPlot({
+    df_scorecard_bump_chart <- rx_df_scorecard_bump_chart()
+    ggplot(data = df_scorecard_bump_chart) +
+      geom_point(mapping = aes(x = `Days Till`, y = `Inverse Rank`)) +
+      geom_line(mapping = aes(x = `Days Till`, y = `Inverse Rank`, color = `Team Short Name`), show.legend = FALSE) +
+      geom_text(
+        data = df_scorecard_bump_chart[`Days Till` == last_completed_match_day],
+        mapping = aes(label = `Team Short Name`, color = `Team Short Name`, x = last_completed_match_day + 1, y = `Inverse Rank`),
+        show.legend = FALSE
+      ) +
+      theme_classic()
+  })
   ##
   
   # Last Completed Day Matches
