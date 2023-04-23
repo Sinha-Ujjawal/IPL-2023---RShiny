@@ -21,6 +21,7 @@ load_df_matches <- function(fileid) {
   df_matches[`Winner` == "Away", "Winner Team Name" := `Away Team`]
   df_matches[, "Time" := format(`Datestamp`, "%H:%M")]
   df_matches[order(`Datestamp`)]
+  df_matches[, "Match#" := 1:.N]
 }
 
 my_date_formatter <- function(dt) format(dt, "%d-%b-%y")
@@ -237,6 +238,7 @@ server <- function(input, output) {
         renderDataTable(df_last_completed_matches[
           ,
           list(
+            `Match#`,
             `Day`,
             `Time`,
             `Home Team`,
@@ -266,6 +268,7 @@ server <- function(input, output) {
         renderDataTable(df_next_day_matches[
           ,
           list(
+            `Match#`,
             `Day`,
             `Time`,
             `Home Team`,
@@ -285,6 +288,7 @@ server <- function(input, output) {
   output$wout_all_matches_table <- renderDataTable(df_matches[
     ,
     list(
+      `Match#`,
       `Date`,
       `Day`,
       `Time`,
