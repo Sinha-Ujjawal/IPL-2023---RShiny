@@ -158,8 +158,8 @@ get_last_completed_match_day <- function(df_matches) {
   df_matches[!is.na(`Winner`), max(`Match Day`)]
 }
 
-estimate_prob_wins <- function(df_matches_till_date, team_a, team_b) {
-  build_matches_where_a_team_is_involved <- function(team) {
+get_team_performance_comparison <- function(df_matches_till_date, team_a, team_b) {
+  build_matches_where_given_team_is_involved <- function(team) {
     rbindlist(list(
       df_matches_till_date
       [`Home Team` == team]
@@ -168,7 +168,11 @@ estimate_prob_wins <- function(df_matches_till_date, team_a, team_b) {
         list(
           "Team" = `Home Team`,
           "Opponent Team" = `Away Team`,
-          "Won?" = `Winner` == "Home"
+          "Won?" = `Winner` == "Home",
+          "Runs For NRR" = `Runs For NRR (Home)`,
+          "Balls For NRR" = `Balls For NRR (Home)`,
+          "Opponent Runs For NRR" = `Runs For NRR (Away)`,
+          "Opponent Balls For NRR" = `Balls For NRR (Away)`
         )
       ],
       df_matches_till_date
@@ -178,40 +182,80 @@ estimate_prob_wins <- function(df_matches_till_date, team_a, team_b) {
         list(
           "Team" = `Away Team`,
           "Opponent Team" = `Home Team`,
-          "Won?" = `Winner` == "Away"
+          "Won?" = `Winner` == "Away",
+          "Runs For NRR" = `Runs For NRR (Away)`,
+          "Balls For NRR" = `Balls For NRR (Away)`,
+          "Opponent Runs For NRR" = `Runs For NRR (Home)`,
+          "Opponent Balls For NRR" = `Balls For NRR (Home)`
         )
       ]
     ))
   }
   
-  df_matches_where_team_a_is_involved <- build_matches_where_a_team_is_involved(team_a)
-  df_matches_where_team_b_is_involved <- build_matches_where_a_team_is_involved(team_b)
+  df_matches_where_team_a_is_involved <- build_matches_where_given_team_is_involved(team_a)
+  df_matches_where_team_b_is_involved <- build_matches_where_given_team_is_involved(team_b)
   
   common_opponents <- intersect(
     df_matches_where_team_a_is_involved$`Opponent Team`,
     df_matches_where_team_b_is_involved$`Opponent Team`
   )
   
-  prob_a_win <- {
-    df_matches_where_team_a_is_involved_and_common_opponents_with_b <- (
-      df_matches_where_team_a_is_involved
-      [`Opponent Team` %in% common_opponents]
-    )
-    (
-      nrow(df_matches_where_team_a_is_involved_and_common_opponents_with_b[`Won?` == TRUE])
-      / nrow(df_matches_where_team_a_is_involved_and_common_opponents_with_b)
-    )
-  }
+  df_matches_where_team_a_is_involved_and_common_opponents_with_b <- (
+    df_matches_where_team_a_is_involved
+    [`Opponent Team` %in% common_opponents]
+  )
   
-  prob_b_win <- {
-    df_matches_where_team_b_is_involved_and_common_opponents_with_a <- (
-      df_matches_where_team_b_is_involved
-      [`Opponent Team` %in% common_opponents]
-    )
-    (
-      nrow(df_matches_where_team_b_is_involved_and_common_opponents_with_a[`Won?` == TRUE])
-      / nrow(df_matches_where_team_b_is_involved_and_common_opponents_with_a)
-    )
-  }
-  c(prob_a_win, prob_b_win)
+  df_matches_where_team_b_is_involved_and_common_opponents_with_a <- (
+    df_matches_where_team_b_is_involved
+    [`Opponent Team` %in% common_opponents]
+  )
+  
+  win_ratio_team_a <- (
+    nrow(df_matches_where_team_a_is_involved_and_common_opponents_with_b[`Won?` == TRUE])
+    / nrow(df_matches_where_team_a_is_involved_and_common_opponents_with_b)
+  )
+  
+  nrr_wrt_common_opps_team_a <- (
+    df_matches_where_team_a_is_involved_and_common_opponents_with_b[
+      ,
+      (
+        (
+          sum(`Runs For NRR`)
+          / sum(`Balls For NRR`)
+        )
+        - (
+          sum(`Opponent Runs For NRR`)
+          / sum(`Opponent Balls For NRR`)
+        )
+      ) * 6
+    ]
+  )
+  
+  win_ratio_team_b <- (
+    nrow(df_matches_where_team_b_is_involved_and_common_opponents_with_a[`Won?` == TRUE])
+    / nrow(df_matches_where_team_b_is_involved_and_common_opponents_with_a)
+  )
+  
+  nrr_wrt_common_opps_team_b <- (
+    df_matches_where_team_b_is_involved_and_common_opponents_with_a[
+      ,
+      (
+        (
+          sum(`Runs For NRR`)
+          / sum(`Balls For NRR`)
+        )
+        - (
+          sum(`Opponent Runs For NRR`)
+          / sum(`Opponent Balls For NRR`)
+        )
+      ) * 6
+    ]
+  )
+  
+  list(
+    win_ratio_team_a = win_ratio_team_a,
+    nrr_wrt_common_opps_team_a = nrr_wrt_common_opps_team_a,
+    win_ratio_team_b = win_ratio_team_b,
+    nrr_wrt_common_opps_team_b = nrr_wrt_common_opps_team_b
+  )
 }

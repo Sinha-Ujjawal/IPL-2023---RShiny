@@ -62,7 +62,14 @@ ui <- fluidPage(
     
     # Next Day Matches
     htmlOutput(outputId = "wout_next_day_matches"),
-    markdown("***Note - Win Probability is calculated based on common opponents comparison. It's very naïve and most likely incorrect. There is no science backing it. Use it at your own risk ;)***"),
+    markdown(
+      "***Note -***
+      
+        ***1. Win Ratio is the ratio of wins of a team, where the opponents of the other team were also involved***
+        
+        ***2. CNRR (Common Net Run Rate) is the net run rate of a team, where the opponents of the other team were also involved***
+      "
+    ),
     ##
     
     # All Matches
@@ -88,16 +95,26 @@ server <- function(input, output) {
   home_teams <- df_next_day_matches$`Home Team`
   away_teams <- df_next_day_matches$`Away Team`
   
-  df_next_day_matches$`Win Probs` <- 1:length(home_teams) |>
-    lapply(function(i) estimate_prob_wins(df_matches_till_date, home_teams[[i]], away_teams[[i]]))
+  df_next_day_matches$`Perf Comp` <- 1:length(home_teams) |>
+    lapply(function(i) get_team_performance_comparison(df_matches_till_date, home_teams[[i]], away_teams[[i]]))
   
-  df_next_day_matches$`Win Prob (Home Team)` <- df_next_day_matches$`Win Probs` |>
-    lapply(function(win_probs) win_probs[[1]]) |>
+  df_next_day_matches$`Win Ratio (Home Team)` <- df_next_day_matches$`Perf Comp` |>
+    lapply(function(perf_comp) perf_comp$win_ratio_team_a) |>
     unlist() |>
     round(2)
   
-  df_next_day_matches$`Win Prob (Away Team)` <- df_next_day_matches$`Win Probs` |>
-    lapply(function(win_probs) win_probs[[2]]) |>
+  df_next_day_matches$`Win Ratio (Away Team)` <- df_next_day_matches$`Perf Comp` |>
+    lapply(function(perf_comp) perf_comp$win_ratio_team_b) |>
+    unlist() |>
+    round(2)
+  
+  df_next_day_matches$`CNRR (Home Team)` <- df_next_day_matches$`Perf Comp` |>
+    lapply(function(perf_comp) perf_comp$nrr_wrt_common_opps_team_a) |>
+    unlist() |>
+    round(2)
+  
+  df_next_day_matches$`CNRR (Away Team)` <- df_next_day_matches$`Perf Comp` |>
+    lapply(function(perf_comp) perf_comp$nrr_wrt_common_opps_team_b) |>
     unlist() |>
     round(2)
   
@@ -252,9 +269,11 @@ server <- function(input, output) {
             `Day`,
             `Time`,
             `Home Team`,
-            `Win Prob (Home Team)`,
+            `Win Ratio (Home Team)`,
+            `CNRR (Home Team)`,
             `Away Team`,
-            `Win Prob (Away Team)`
+            `Win Ratio (Away Team)`,
+            `CNRR (Away Team)`
           )
         ])
       )
