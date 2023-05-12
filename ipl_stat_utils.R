@@ -118,9 +118,9 @@ build_scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
         "Num Matches" = .N,
         "Num Losses" = 0,
         "Runs For NRR" = 0,
-        "Balls For NRR" = 1,
+        "Balls For NRR" = 0,
         "Opponent Runs For NRR" = 0,
-        "Opponent Balls For NRR" = 1
+        "Opponent Balls For NRR" = 0
       ),
       by = list("Team" = `Home Team`)
     ],
@@ -131,9 +131,9 @@ build_scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
         "Num Matches" = .N,
         "Num Losses" = 0,
         "Runs For NRR" = 0,
-        "Balls For NRR" = 1,
+        "Balls For NRR" = 0,
         "Opponent Runs For NRR" = 0,
-        "Opponent Balls For NRR" = 1
+        "Opponent Balls For NRR" = 0
       ),
       by = list("Team" = `Away Team`)
     ]
