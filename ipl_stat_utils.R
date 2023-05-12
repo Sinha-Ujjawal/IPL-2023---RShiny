@@ -110,11 +110,40 @@ build_scorecard <- function(df_matches, lastn = 5, nrr_round_digits = 2) {
     ]
   ))
   
+  df_draw_stats <- rbindlist(list(
+    df_matches[
+      Winner == "Draw",
+      list(
+        "Win Points" = .N,
+        "Num Matches" = .N,
+        "Num Losses" = 0,
+        "Runs For NRR" = 0,
+        "Balls For NRR" = 1,
+        "Opponent Runs For NRR" = 0,
+        "Opponent Balls For NRR" = 1
+      ),
+      by = list("Team" = `Home Team`)
+    ],
+    df_matches[
+      Winner == "Draw",
+      list(
+        "Win Points" = .N,
+        "Num Matches" = .N,
+        "Num Losses" = 0,
+        "Runs For NRR" = 0,
+        "Balls For NRR" = 1,
+        "Opponent Runs For NRR" = 0,
+        "Opponent Balls For NRR" = 1
+      ),
+      by = list("Team" = `Away Team`)
+    ]
+  ))
+  
   df_by_team_last_n <- build_by_team_last_n(df_matches, n = lastn)
   
   (
     merge.data.table(
-      rbindlist(list(df_win_stats, df_loss_stats))[
+      rbindlist(list(df_win_stats, df_loss_stats, df_draw_stats))[
         ,
         list(
           "Num Matches" = sum(`Num Matches`),
